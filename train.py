@@ -5,7 +5,7 @@ import os
 from copy import deepcopy
 import datetime
 from tqdm import tqdm
-# from torch.utils.tensorboard import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 import params
 
 from train_utils import *
@@ -35,11 +35,11 @@ np.random.seed(seed)
 from data_utils import SalesDataset
 from torch.utils.data import DataLoader
 
-# TRAIN = params.TRAIN
-# TEST = params.TEST
+TRAIN = 'train.npz'
+TEST = 'test.npz'
 
-train_data = SalesDataset(None, randomize = True)
-test_data = SalesDataset(None, randomize = True)
+train_data = SalesDataset(TRAIN, randomize = False)
+test_data = SalesDataset(TEST, randomize = False)
 
 train_loader = DataLoader(train_data, batch_size, shuffle = True)
 test_loader = DataLoader(test_data, batch_size, shuffle = True)
@@ -52,6 +52,9 @@ val_loader = test_loader
 from hyperband import random_nn_params
 from model import DeepVendorSimple
 from loss_function import EuclideanLoss, CostFunction
+
+best_overall_model = None
+best_overall_cost = 100000.0
 
 for model_idx in tqdm(range(params.NUM_MODELS)):
 
@@ -75,7 +78,7 @@ for model_idx in tqdm(range(params.NUM_MODELS)):
     test_criterion = CostFunction(params.SHORTAGE_COST, params.HOLDING_COST)
 
     writer_path = os.path.join(id+'_idx_'+str(model_idx))
-    #writer = SummaryWriter(writer_path)
+    writer = SummaryWriter(writer_path)
 
     best_model = None
     best_val_loss = 100000.0
@@ -95,11 +98,11 @@ for model_idx in tqdm(range(params.NUM_MODELS)):
             print(f'epoch: {epoch}, loss: {loss}')
 
             # log in tensorboard
-            #writer.add_scalar('Training/Prediction Loss', loss, epoch)
+            writer.add_scalar('Training/Prediction Loss', loss, epoch)
 
             # Eval model
             loss = discriminative_evaluate(model, val_loader, test_criterion)
-            #writer.add_scalar('Validation/Prediction Cost', loss, epoch)
+            writer.add_scalar('Validation/Prediction Cost', loss, epoch)
 
             if loss < best_val_loss:
                 best_val_loss = loss
@@ -119,4 +122,12 @@ for model_idx in tqdm(range(params.NUM_MODELS)):
     torch.cuda.empty_cache()
     loss= discriminative_evaluate(model, test_loader, test_criterion)
     print('Test Prediction Cost: ', loss)
+
+    if loss < best_overall_cost:
+        best_overall_model = deepcopy(model)
+
+torch.save(model.state_dict(), os.path.join('best_model.pth'))
+
+
+
             

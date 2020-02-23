@@ -13,7 +13,7 @@ class SalesDataset(Dataset):
             data = np.load(npz_path)
             self.X = data['X']
             self.Y = data['Y']
-            self.length = self.X.shape[1]
+            self.length = self.X.shape[0]
         else:
             self.length = 1000
 
