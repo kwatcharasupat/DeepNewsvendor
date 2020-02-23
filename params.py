@@ -1,0 +1,2 @@
+NN_MIN_LAYER = 2
+NN_MAX_LAYER = 3
